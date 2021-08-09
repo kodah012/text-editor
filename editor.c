@@ -6,38 +6,17 @@
 #include <ctype.h>
 #include <sys/file.h>
 #include "helper.h"
+#include "linelist.h"
+#include "buffarr.h"
 
-#define CMD_BUFSZ 512
-#define INIT_BUFFER_CAP 128
-#define INIT_LINES_CAP 8
-
-typedef struct Buffer
-{
-    char *ptr;
-    int cap;
-    int len;
-    int endsInNewline;
-}
-Buffer;
-
-typedef struct Lines
-{
-    char **ptr;
-    int cap;
-    int len;
-}
-Lines;
-
-void readFile(int, Buffer*);
-void setLines(Lines*, Buffer*);
-void runEditor(int, Buffer*, Lines*);
-
+void setLines(LineList *lines, BuffArr *buffer);
+void runEditor(int, LineList*);
 
 int main(int argc, char *argv[])
 {
     int fileDesc;
-    Buffer buffer;
-    Lines lines;
+    BuffArr *buffer;
+    LineList *lines;
 
     if (argc != 2)
     {
@@ -45,27 +24,22 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    // initialize buffer
-    buffer.cap = INIT_BUFFER_CAP;
-    buffer.len = 0;
-    buffer.ptr = malloc(buffer.cap * sizeof(char));
-    buffer.endsInNewline = 0;
-
-    // initialize lines
-    lines.cap = INIT_LINES_CAP;
-    lines.len = 0;
-    lines.ptr = malloc(lines.cap * sizeof(char*));
+    buffer = createBuffArr();
+    lines = createLineList();
 
     // open and read file into buffer and lines if file exists
     fileDesc = open(argv[1], O_RDWR);
     if (fileDesc != -1)
     {
-        readFile(fileDesc, &buffer);
-        setLines(&lines, &buffer);
+        flock(fileDesc, LOCK_EX);
+        readFile(fileDesc, buffer);
+        setLines(lines, buffer);
     }
 
+    deleteBuffArr(buffer);
+
     // start text editor loop
-    runEditor(fileDesc, &buffer, &lines);
+    runEditor(fileDesc, lines);
     
     // any code after this point should never be reached
  
@@ -73,96 +47,40 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
 }
 
-char *getLine(const Lines *lines, int lineNum)
-{
-    // if line number is invalid, return null
-    if (lineNum - 1 < 0 || lineNum > lines->len) return NULL;
-    return lines->ptr[lineNum - 1];
-}
 
-void printLine(int lineNum, Lines *lines)
-{
-    int charsPrinted;
-    char *line;
-
-    charsPrinted = 0;
-    line = getLine(lines, lineNum);
-
-    if (lines->len <= 1)
-    {
-        write(STDOUT_FILENO, "\n", 1);
-        charsPrinted++;
-    }
-    else
-    {
-        // print characters in line until newline is reached
-        for (charsPrinted = 0; line[charsPrinted] != '\n'; charsPrinted++)
-        {
-            write(STDOUT_FILENO, line + charsPrinted, 1);
-        }
-
-        // print newline at the end of line
-        write(STDOUT_FILENO, line + charsPrinted, 1);
-        charsPrinted++;
-    }
-}
-
-int validCommand(char *cmd, int cmdLen, Lines *lines)
+int validCommand(BuffArr *cmd, LineList *lines)
 {
     int cmdIsValid = 0;
 
-    if (stringIsNumber(cmd, cmdLen))
+    if (stringIsNumber(cmd->buf, cmd->len))
     {
-        cmdIsValid = getLine(lines, atoi(cmd)) != NULL;
+        cmdIsValid = validLineNum(atoi(cmd->buf), lines);
     }
-    else if (*cmd == 'p' && cmdLen == 1) cmdIsValid = 1;
-    else if (*cmd == 'n' && cmdLen == 1) cmdIsValid = 1;
-    else if (*cmd == 'q' && cmdLen == 1) cmdIsValid = 1;
+    else if (*cmd->buf == 'p' && cmd->len == 1) cmdIsValid = 1;
+    else if (*cmd->buf == 'n' && cmd->len == 1) cmdIsValid = 1;
+    else if (*cmd->buf == 'q' && cmd->len == 1) cmdIsValid = 1;
 
     return cmdIsValid;
 }
 
-void printNumLeftAligned(int num, Lines *lines)
+void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
 {
-    int i;
-    int numBytes;
-    int maxDigits;
+    int n;
 
-    numBytes = printNum(num);
-    maxDigits = countDigits(lines->len);
-
-    for (i = 0; i < maxDigits - numBytes; i++)
+    if (isdigit(*cmd->buf))
     {
-        write(STDOUT_FILENO, " ", 1);
+        n = atoi(cmd->buf);
+        moveCurr(n, lines);
     }
-}
-
-void runCommand(char *cmd, int fileDesc, Buffer *buffer, Lines *lines, int *currLine)
-{
-    int lineNum;    
-
-    if (isdigit(*cmd))
+    else if (*cmd->buf == 'p')
     {
-        lineNum = atoi(cmd);
-        *currLine = lineNum;
+        printLines(lines);
     }
-    else if (*cmd == 'p')
+    else if (*cmd->buf == 'n')
     {
-        for (lineNum = 1; lineNum <= lines->len; lineNum++)
-        {
-            printLine(lineNum, lines);
-        }
+        printNumberedLines(lines);
     }
-    else if (*cmd == 'n')
-    {
-        for (lineNum = 1; lineNum <= lines->len; lineNum++)
-        {
-            printNumLeftAligned(lineNum, lines);
-            write(STDOUT_FILENO, " | ", 3);
-            printLine(lineNum, lines);
-        }
-    }
-    else if (*cmd == 'q')
+    else if (*cmd->buf == 'q')
     {
         if (fileDesc != -1)
         {
@@ -170,28 +88,28 @@ void runCommand(char *cmd, int fileDesc, Buffer *buffer, Lines *lines, int *curr
             close(fileDesc);
         }
 
-        free(buffer->ptr);
-        free(lines->ptr);
+        deleteLineList(lines);
         exit(EXIT_SUCCESS);
     }
 }
 
-void runEditor(int fileDesc, Buffer *buffer, Lines *lines)
+void runEditor(int fileDesc, LineList *lines)
 {
     int i;
-    int currLine;
-    int cmdLen;
     int cmdWasValid;
-    char cmd[CMD_BUFSZ];
+    char c;
+    BuffArr *cmd;
 
-    currLine = 1;
+    moveCurr(1, lines);
+
     cmdWasValid = 1;
+    cmd = createBuffArr();
 
     while (1)
     {
-        printLine(currLine, lines);
+        printLine(lines->curr);
+        printNum(lines->currLineNum);
 
-        printNum(currLine);
         if (cmdWasValid)
         {
             write(STDOUT_FILENO, " -> ", 4);
@@ -201,81 +119,65 @@ void runEditor(int fileDesc, Buffer *buffer, Lines *lines)
             write (STDOUT_FILENO, " !> ", 4);
         }
 
-        // - 1 to get rid of newline at the end of stdin
-        cmdLen = read(STDIN_FILENO, cmd, CMD_BUFSZ) - 1;
+        clearBuf(cmd);
 
-
-        if ((cmdWasValid = validCommand(cmd, cmdLen, lines)))
+        while ((c = getchar()) != '\n')
         {
-            runCommand(cmd, fileDesc, buffer, lines, &currLine);
+            appendChar(c, cmd);
+        }
+
+        if ((cmdWasValid = validCommand(cmd, lines)))
+        {
+            runCommand(cmd, lines, fileDesc);
         }
     } 
 }
 
 
-void expandBuffer(Buffer *buffer)
-{
-    // if there is less than 32 bytes left in buffer, double buffer's capacity
-    if (buffer->cap - buffer->len < 32)
-    {
-        buffer->cap *= 2;
-        buffer->ptr = realloc(buffer->ptr, buffer->cap);
-    }
-}
-
-void readFile(int fileDesc, Buffer *buffer)
-{
-    int n;
-
-    // prevent anyone else from reading or writing
-    flock(fileDesc, LOCK_EX);
-
-    while ((n = read(fileDesc, buffer->ptr + buffer->len, buffer->cap - buffer->len)) > 0)
-    {
-        buffer->len += n;
-        expandBuffer(buffer);
-    }
-    
-    buffer->endsInNewline = buffer->ptr[buffer->len - 1] == '\n';
-
-    // if last character of buffer is not a newline, add a newline to the buffer
-    if (!buffer->endsInNewline)
-    {
-        buffer->endsInNewline = 0;
-        buffer->len += 1;
-        expandBuffer(buffer);
-        buffer->ptr[buffer->len - 1] = '\n';
-    }
-}
-
-void setLines(Lines *lines, Buffer *buffer)
+void setLines(LineList *lines, BuffArr *buffer)
 {
     int i;
+    int newLineLen;
     char *currLine;
+    char *newLine;
 
-    currLine = buffer->ptr;
+    newLineLen = 0;
+    currLine = buffer->buf;
 
     for (i = 0; i < buffer->len; i++)
     {
-        if (buffer->ptr[i] == '\n')
-        {
-            lines->ptr[lines->len] = currLine;
-            lines->len++;
+        newLineLen++;
 
-            // set currLine to start at character after newline if possible
+        if (buffer->buf[i] == '\n')
+        {
+            newLine = malloc((newLineLen + 1) * sizeof(char));
+            strncpy(newLine, currLine, newLineLen);
+            newLine[newLineLen] = '\0';
+
+            appendLineAfterCurr(newLine, lines);
+
+            newLineLen = 0;
+            
+            // set currLine to start at character after '\n' if possible
             if (i + 1 < buffer->len)
             {
-                currLine = buffer->ptr + i + 1;
-            }
-
-            // if lines buffer has been filled to capacity, double its capacity
-            if (lines->len >= lines->cap)
-            {
-                lines->cap *= 2;
-                lines->ptr = realloc(lines->ptr, lines->cap * sizeof(char*));
+                currLine = buffer->buf + i + 1;
             }
         }
+    }
 
+    if (buffer->buf[buffer->len - 1] != '\n')
+    {
+        printf("file did not end in newline\n");
+        // file does not end with '\n'; insert into list anyways
+        newLine = malloc(newLineLen * sizeof(char));
+        strncpy(newLine, currLine, newLineLen);
+
+        appendLineAfterCurr(newLine, lines);
+    }
+    else
+    {
+        printf("file ended in newline\n");
     }
 }
 

@@ -31,6 +31,8 @@ void deleteCurr(LineList *list)
 {
     LineNode *curr;
 
+    // SEGMENTATION FAULT WHEN DELETING LAST LINE IN LIST
+
     if (list == NULL)
     {
         fprintf(stderr, "deleteCurr: list is NULL\n");
@@ -71,6 +73,11 @@ void deleteCurr(LineList *list)
     }
 
     list->maxLineNum--;
+
+    if (list->currLineNum <= 0)
+    {
+        list->currLineNum = 1;
+    }
 
     free(curr);
 }
@@ -170,13 +177,9 @@ void printLine(LineNode *node)
 {
     char *line;
 
-    line = node->line;
+    if (node == NULL || node->line == NULL) return;
 
-    if (line == NULL)
-    {
-        fprintf(stderr, "printLineNode: node->line is NULL\n");
-        exit(EXIT_FAILURE);
-    }
+    line = node->line;
 
     while (*line != '\0')
     {
@@ -188,6 +191,7 @@ void printLine(LineNode *node)
 void printLines(LineList *list)
 {
     LineNode *node;
+
 
     node = list->head;
 
@@ -232,10 +236,13 @@ void printNumberedLines(LineList *list)
         }
     }
 
+
+    if (node == NULL) return;
+    
     n = strlen(node->line);
     if (n == 0 || node->line[n - 1] != '\n')
     {
-        // last line in list does not end with '\n'; print one anyways
+        // list is empty OR last line in list does not end with '\n'; print one anyways
         write(STDOUT_FILENO, "\n", 1);
     }
 }

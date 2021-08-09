@@ -58,6 +58,11 @@ int validCommand(BuffArr *cmd, LineList *lines)
     }
     else if (*cmd->buf == 'p' && cmd->len == 1) cmdIsValid = 1;
     else if (*cmd->buf == 'n' && cmd->len == 1) cmdIsValid = 1;
+    else if (*cmd->buf == 'd' && cmd->len == 1)
+    {
+        // valid if list is not empty
+        cmdIsValid = lines->head != NULL;
+    }
     else if (*cmd->buf == 'q' && cmd->len == 1) cmdIsValid = 1;
 
     return cmdIsValid;
@@ -80,6 +85,10 @@ void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
     {
         printNumberedLines(lines);
     }
+    else if (*cmd->buf == 'd')
+    {
+        deleteCurr(lines);
+    }
     else if (*cmd->buf == 'q')
     {
         if (fileDesc != -1)
@@ -100,7 +109,8 @@ void runEditor(int fileDesc, LineList *lines)
     char c;
     BuffArr *cmd;
 
-    moveCurr(1, lines);
+    lines->currLineNum = 1;
+    lines->curr = lines->head;
 
     cmdWasValid = 1;
     cmd = createBuffArr();
@@ -132,7 +142,6 @@ void runEditor(int fileDesc, LineList *lines)
         }
     } 
 }
-
 
 void setLines(LineList *lines, BuffArr *buffer)
 {
@@ -166,18 +175,13 @@ void setLines(LineList *lines, BuffArr *buffer)
         }
     }
 
-    if (buffer->buf[buffer->len - 1] != '\n')
+    if (newLineLen > 0 && buffer->buf[buffer->len - 1] != '\n')
     {
-        printf("file did not end in newline\n");
         // file does not end with '\n'; insert into list anyways
         newLine = malloc(newLineLen * sizeof(char));
         strncpy(newLine, currLine, newLineLen);
 
         appendLineAfterCurr(newLine, lines);
-    }
-    else
-    {
-        printf("file ended in newline\n");
     }
 }
 

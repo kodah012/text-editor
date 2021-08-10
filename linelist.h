@@ -13,7 +13,7 @@ typedef struct LineList
 {
     LineNode *head;
     LineNode *curr;
-    int maxLineNum;
+    int len;
     int currLineNum;
 }
 LineList;
@@ -21,11 +21,14 @@ LineList;
 LineNode *createLineNode();
 LineList *createLineList();
 
-void deleteCurr(LineList *list);
+LineNode *deleteCurr(LineList *list);
 void deleteLineList(LineList *list);
 
+void setCurrLineNum(int lineNum, LineList *list);
+
 void moveCurr(int lineNum, LineList *list);
-void appendLineAfterCurr(char *line, LineList *list);
+void insertNodeBeforeCurr(LineNode *node, LineList *list);
+void appendNodeAfterCurr(LineNode *node, LineList *list);
 
 LineNode *getLineNode(int lineNum, LineList *list);
 

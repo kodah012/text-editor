@@ -22,16 +22,14 @@ LineList *createLineList()
     list = malloc(sizeof(LineList));
     list->head = NULL;
     list->curr = NULL;
-    list->currLineNum = 1;
-    list->maxLineNum = 0;
+    list->currLineNum = 0;
+    list->len = 0;
     return list;
 }
 
-void deleteCurr(LineList *list)
+LineNode *deleteCurr(LineList *list)
 {
     LineNode *curr;
-
-    // SEGMENTATION FAULT WHEN DELETING LAST LINE IN LIST
 
     if (list == NULL)
     {
@@ -39,7 +37,7 @@ void deleteCurr(LineList *list)
         exit(EXIT_FAILURE);
     }
     
-    if (list->maxLineNum == 0)
+    if (list->len == 0)
     {
         fprintf(stderr, "deleteCurr: list is empty\n");
         exit(EXIT_FAILURE);
@@ -72,14 +70,9 @@ void deleteCurr(LineList *list)
         list->head = curr->next;
     }
 
-    list->maxLineNum--;
+    list->len--;
 
-    if (list->currLineNum <= 0)
-    {
-        list->currLineNum = 1;
-    }
-
-    free(curr);
+    return curr;
 }
 
 void deleteLineList(LineList *list)
@@ -92,17 +85,17 @@ void deleteLineList(LineList *list)
 
     while (list->head != NULL)
     {
-        deleteCurr(list);
+        free(deleteCurr(list));
     }
 
     free(list);
 }
 
-void moveCurr(int lineNum, LineList *list)
+void setCurrLineNum(int lineNum, LineList *list)
 {
     if (!validLineNum(lineNum, list))
     {
-        fprintf(stderr, "moveCurr: lineNum out of bounds\n");
+        fprintf(stderr, "setCurrLineNum: lineNum out of bounds\n");
         exit(EXIT_FAILURE);
     }
 
@@ -110,35 +103,93 @@ void moveCurr(int lineNum, LineList *list)
     list->currLineNum = lineNum;
 }
 
-void appendLineAfterCurr(char *line, LineList *list)
+void moveCurr(int lineNum, LineList *list)
 {
-    LineNode *newNode;
+    LineNode *node;
 
-    newNode = createLineNode();
-    newNode->line = line;
-
-    // if list is empty, replace head with new node
-    if (list->curr == NULL)
+    if (!validLineNum(lineNum, list) && lineNum != -1)
     {
-        list->head = newNode;
-        list->curr = newNode;
-        list->currLineNum = 1;
-        list->maxLineNum = 1;
+        fprintf(stderr, "moveCurr: lineNum out of bounds\n");
+        exit(EXIT_FAILURE);
+    }
+
+    node = deleteCurr(list);
+
+    if (lineNum == -1)
+    {
+        // put line at end of list
+        setCurrLineNum(list->len, list);
+        appendNodeAfterCurr(node, list);
+    }
+    else if (lineNum >= list->currLineNum && lineNum > 1)
+    {
+        setCurrLineNum(lineNum - 1, list);
+        insertNodeBeforeCurr(node, list);
     }
     else
     {
-        newNode->next = list->curr->next;
-        newNode->prev = list->curr;
-        // move current node and line number to be new node
-        list->curr->next = newNode;
-        list->curr = list->curr->next;
-        list->currLineNum++;
+        setCurrLineNum(lineNum, list);
+        insertNodeBeforeCurr(node, list);
+    }
+}
 
-        if (list->currLineNum > list->maxLineNum)
+void insertNodeBeforeCurr(LineNode *node, LineList *list)
+{
+    // if list is empty, replace head with new node
+    if (list->curr == NULL)
+    {
+        list->head = node;
+        list->curr = node;
+        list->currLineNum = 1;
+        list->len = 1;
+    }
+    else
+    {
+        node->next = list->curr;
+        node->prev = list->curr->prev;
+        list->curr->prev = node;
+        if (node->prev != NULL)
         {
-            // current node is at end of list, so increment maxLineNum
-            list->maxLineNum = list->currLineNum;
+            node->prev->next = node;
         }
+        else
+        {
+            // current node is head node; set head to new node
+            list->head = node;
+        }
+
+        // move current node to be new node (line number stays the same)
+        list->curr = node;
+
+        list->len++;
+    }
+}
+
+void appendNodeAfterCurr(LineNode *node, LineList *list)
+{
+    // if list is empty, replace head with new node
+    if (list->curr == NULL)
+    {
+        list->head = node;
+        list->curr = node;
+        list->currLineNum = 1;
+        list->len = 1;
+    }
+    else
+    {
+        node->next = list->curr->next;
+        node->prev = list->curr;
+        list->curr->next = node;
+        if (node->next != NULL)
+        {
+            node->next->prev = node;
+        }
+
+        // move current node and line number to be new node
+        list->curr = node;
+        list->currLineNum++;
+        
+        list->len++;
     }
 }
 
@@ -209,7 +260,7 @@ void printNumLeftAligned(int num, LineList *list)
     int maxDigits;
 
     numBytes = printNum(num);
-    maxDigits = countDigits(list->maxLineNum);
+    maxDigits = countDigits(list->len);
 
     for (i = 0; i < maxDigits - numBytes; i++)
     {
@@ -224,13 +275,13 @@ void printNumberedLines(LineList *list)
 
     node = list->head;
 
-    for (n = 1; n <= list->maxLineNum; n++)
+    for (n = 1; n <= list->len; n++)
     {
         printNumLeftAligned(n, list);
         write(STDOUT_FILENO, " | ", 3);
         printLine(node);
 
-        if (n < list->maxLineNum)
+        if (n < list->len)
         {
             node = node->next;
         }
@@ -249,5 +300,5 @@ void printNumberedLines(LineList *list)
 
 int validLineNum(int lineNum, LineList *list)
 {
-    return lineNum >= 1 && lineNum <= list->maxLineNum;
+    return lineNum >= 1 && lineNum <= list->len;
 }

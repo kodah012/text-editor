@@ -50,11 +50,13 @@ int main(int argc, char *argv[])
 
 int validCommand(BuffArr *cmd, LineList *lines)
 {
+    int n;
     int cmdIsValid = 0;
 
     if (stringIsNumber(cmd->buf, cmd->len))
     {
-        cmdIsValid = validLineNum(atoi(cmd->buf), lines);
+        n = atoi(cmd->buf);
+        cmdIsValid = validLineNum(n, lines);
     }
     else if (*cmd->buf == 'p' && cmd->len == 1) cmdIsValid = 1;
     else if (*cmd->buf == 'n' && cmd->len == 1) cmdIsValid = 1;
@@ -62,6 +64,18 @@ int validCommand(BuffArr *cmd, LineList *lines)
     {
         // valid if list is not empty
         cmdIsValid = lines->head != NULL;
+    }
+    else if (*cmd->buf == 'm' && cmd->len > 1)
+    {
+        if (stringIsNumber(cmd->buf + 1, cmd->len - 1))
+        {
+            n = atoi(cmd->buf + 1);
+            cmdIsValid = validLineNum(n, lines);
+        }
+        else
+        {
+            cmdIsValid = cmd->buf[1] == '$' && cmd->len == 2;
+        }
     }
     else if (*cmd->buf == 'q' && cmd->len == 1) cmdIsValid = 1;
 
@@ -75,7 +89,7 @@ void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
     if (isdigit(*cmd->buf))
     {
         n = atoi(cmd->buf);
-        moveCurr(n, lines);
+        setCurrLineNum(n, lines);
     }
     else if (*cmd->buf == 'p')
     {
@@ -88,6 +102,19 @@ void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
     else if (*cmd->buf == 'd')
     {
         deleteCurr(lines);
+    }
+    else if (*cmd->buf == 'm')
+    {
+        if (isdigit(cmd->buf[1]))
+        {
+            n = atoi(cmd->buf + 1);
+            moveCurr(n, lines);
+        }
+        else if (cmd->buf[1] == '$')
+        {
+            // move line to end of file
+            moveCurr(-1, lines);
+        }
     }
     else if (*cmd->buf == 'q')
     {
@@ -109,7 +136,7 @@ void runEditor(int fileDesc, LineList *lines)
     char c;
     BuffArr *cmd;
 
-    lines->currLineNum = 1;
+    lines->currLineNum = lines->len > 0 ? 1 : 0;
     lines->curr = lines->head;
 
     cmdWasValid = 1;
@@ -149,6 +176,7 @@ void setLines(LineList *lines, BuffArr *buffer)
     int newLineLen;
     char *currLine;
     char *newLine;
+    LineNode *node;
 
     newLineLen = 0;
     currLine = buffer->buf;
@@ -163,7 +191,9 @@ void setLines(LineList *lines, BuffArr *buffer)
             strncpy(newLine, currLine, newLineLen);
             newLine[newLineLen] = '\0';
 
-            appendLineAfterCurr(newLine, lines);
+            node = createLineNode();
+            node->line = newLine;
+            appendNodeAfterCurr(node, lines);
 
             newLineLen = 0;
             
@@ -181,7 +211,10 @@ void setLines(LineList *lines, BuffArr *buffer)
         newLine = malloc(newLineLen * sizeof(char));
         strncpy(newLine, currLine, newLineLen);
 
-        appendLineAfterCurr(newLine, lines);
+        node = createLineNode();
+        node->line = newLine;
+
+        appendNodeAfterCurr(node, lines);
     }
 }
 

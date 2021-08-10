@@ -6,13 +6,28 @@
 #include "helper.h"
 
 
-LineNode *createLineNode()
+LineNode *createLineNode(const char *line, int len)
 {
+    char *str;
     LineNode *node;
+
+    if (line[len - 1] == '\0')
+    {
+        str = malloc(len * sizeof(char));
+        strncpy(str, line, len);
+    }
+    else
+    {
+        str = malloc((len + 1) * sizeof(char));
+        strncpy(str, line, len);
+        str[len] = '\0';
+    }
+
     node = malloc(sizeof(LineNode));
-    node->line = NULL;
     node->next = NULL;
     node->prev = NULL;
+    node->line = str;
+
     return node;
 }
 
@@ -27,19 +42,19 @@ LineList *createLineList()
     return list;
 }
 
-LineNode *deleteCurr(LineList *list)
+LineNode *popCurrNode(LineList *list)
 {
     LineNode *curr;
 
     if (list == NULL)
     {
-        fprintf(stderr, "deleteCurr: list is NULL\n");
+        fprintf(stderr, "popCurrNode: list is NULL\n");
         exit(EXIT_FAILURE);
     }
     
     if (list->len == 0)
     {
-        fprintf(stderr, "deleteCurr: list is empty\n");
+        fprintf(stderr, "popCurrNode: list is empty\n");
         exit(EXIT_FAILURE);
     }
 
@@ -77,6 +92,8 @@ LineNode *deleteCurr(LineList *list)
 
 void deleteLineList(LineList *list)
 {
+    LineNode *node;
+
     if (list == NULL)
     {
         fprintf(stderr, "deleteLineList: list is NULL\n");
@@ -85,7 +102,9 @@ void deleteLineList(LineList *list)
 
     while (list->head != NULL)
     {
-        free(deleteCurr(list));
+        node = popCurrNode(list);
+        free(node->line);
+        free(node);
     }
 
     free(list);
@@ -113,7 +132,7 @@ void moveCurr(int lineNum, LineList *list)
         exit(EXIT_FAILURE);
     }
 
-    node = deleteCurr(list);
+    node = popCurrNode(list);
 
     if (lineNum == -1)
     {
@@ -192,6 +211,7 @@ void appendNodeAfterCurr(LineNode *node, LineList *list)
         list->len++;
     }
 }
+
 
 LineNode *getLineNode(int lineNum, LineList *list)
 {

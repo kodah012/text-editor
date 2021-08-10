@@ -9,6 +9,15 @@
 #include "linelist.h"
 #include "buffarr.h"
 
+enum Mode
+{
+    NORMAL,
+    INSERT,
+    APPEND
+};
+
+enum Mode currMode = NORMAL;
+
 void setLines(LineList *lines, BuffArr *buffer);
 void runEditor(int, LineList*);
 
@@ -53,6 +62,8 @@ int validCommand(BuffArr *cmd, LineList *lines)
     int n;
     int cmdIsValid = 0;
 
+    if (currMode == INSERT || currMode == APPEND) return 1;
+
     if (stringIsNumber(cmd->buf, cmd->len))
     {
         n = atoi(cmd->buf);
@@ -77,6 +88,8 @@ int validCommand(BuffArr *cmd, LineList *lines)
             cmdIsValid = cmd->buf[1] == '$' && cmd->len == 2;
         }
     }
+    else if (*cmd->buf == 'i' && cmd->len == 1) cmdIsValid = 1;
+    else if (*cmd->buf == 'a' && cmd->len == 1) cmdIsValid = 1;
     else if (*cmd->buf == 'q' && cmd->len == 1) cmdIsValid = 1;
 
     return cmdIsValid;
@@ -85,6 +98,34 @@ int validCommand(BuffArr *cmd, LineList *lines)
 void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
 {
     int n;
+    LineNode *node;
+
+    if (currMode == INSERT || currMode == APPEND)
+    {
+        if (*cmd->buf == '.' && cmd->len == 1)
+        {
+            currMode = NORMAL;
+        }
+        else
+        {
+            // if in 'i' mode, insertNodeBeforeCurr once
+            // else, just start appendNodeAfterCurr
+
+            appendChar('\n', cmd);
+            node = createLineNode(cmd->buf, cmd->len);
+
+            if (currMode == INSERT)
+            {
+                insertNodeBeforeCurr(node, lines);
+                currMode = APPEND;
+            }
+            else if (currMode == APPEND)
+            {
+                appendNodeAfterCurr(node, lines);
+            }
+        }
+        return;
+    }
 
     if (isdigit(*cmd->buf))
     {
@@ -101,7 +142,9 @@ void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
     }
     else if (*cmd->buf == 'd')
     {
-        deleteCurr(lines);
+        node = popCurrNode(lines);
+        free(node->line);
+        free(node);
     }
     else if (*cmd->buf == 'm')
     {
@@ -115,6 +158,14 @@ void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
             // move line to end of file
             moveCurr(-1, lines);
         }
+    }
+    else if (*cmd->buf == 'i')
+    {
+        currMode = INSERT;
+    }
+    else if (*cmd->buf == 'a')
+    {
+        currMode = APPEND;
     }
     else if (*cmd->buf == 'q')
     {
@@ -187,12 +238,7 @@ void setLines(LineList *lines, BuffArr *buffer)
 
         if (buffer->buf[i] == '\n')
         {
-            newLine = malloc((newLineLen + 1) * sizeof(char));
-            strncpy(newLine, currLine, newLineLen);
-            newLine[newLineLen] = '\0';
-
-            node = createLineNode();
-            node->line = newLine;
+            node = createLineNode(currLine, newLineLen);
             appendNodeAfterCurr(node, lines);
 
             newLineLen = 0;
@@ -208,12 +254,7 @@ void setLines(LineList *lines, BuffArr *buffer)
     if (newLineLen > 0 && buffer->buf[buffer->len - 1] != '\n')
     {
         // file does not end with '\n'; insert into list anyways
-        newLine = malloc(newLineLen * sizeof(char));
-        strncpy(newLine, currLine, newLineLen);
-
-        node = createLineNode();
-        node->line = newLine;
-
+        node = createLineNode(currLine, newLineLen);
         appendNodeAfterCurr(node, lines);
     }
 }

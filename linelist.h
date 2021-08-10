@@ -18,19 +18,16 @@ typedef struct LineList
 }
 LineList;
 
-LineNode *createLineNode();
+LineNode *createLineNode(const char *line, int len);
 LineList *createLineList();
 
-LineNode *deleteCurr(LineList *list);
-void deleteLineList(LineList *list);
-
+LineNode *popCurrNode(LineList *list);
 void setCurrLineNum(int lineNum, LineList *list);
+LineNode *getLineNode(int lineNum, LineList *list);
 
 void moveCurr(int lineNum, LineList *list);
 void insertNodeBeforeCurr(LineNode *node, LineList *list);
 void appendNodeAfterCurr(LineNode *node, LineList *list);
-
-LineNode *getLineNode(int lineNum, LineList *list);
 
 void printLine(LineNode *node);
 void printLines(LineList *list);
@@ -38,5 +35,6 @@ void printNumberedLines(LineList *list);
 
 int validLineNum(int lineNum, LineList *list);
 
+void deleteLineList(LineList *list);
 
 #endif

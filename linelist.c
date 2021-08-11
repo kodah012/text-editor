@@ -94,11 +94,7 @@ void deleteLineList(LineList *list)
 {
     LineNode *node;
 
-    if (list == NULL)
-    {
-        fprintf(stderr, "deleteLineList: list is NULL\n");
-        exit(EXIT_FAILURE);
-    }
+    if (list == NULL) return;
 
     while (list->head != NULL)
     {
@@ -243,7 +239,6 @@ LineNode *getLineNode(int lineNum, LineList *list)
     return currNode;
 }
 
-
 void printLine(LineNode *node)
 {
     char *line;
@@ -259,64 +254,6 @@ void printLine(LineNode *node)
     }
 }
 
-void printLines(LineList *list)
-{
-    LineNode *node;
-
-
-    node = list->head;
-
-    while (node != NULL)
-    {
-        printLine(node);
-        node = node->next;
-    }
-}
-
-void printNumLeftAligned(int num, LineList *list)
-{
-    int i;
-    int numBytes;
-    int maxDigits;
-
-    numBytes = printNum(num);
-    maxDigits = countDigits(list->len);
-
-    for (i = 0; i < maxDigits - numBytes; i++)
-    {
-        write(STDOUT_FILENO, " ", 1);
-    }
-}
-
-void printNumberedLines(LineList *list)
-{
-    int n;
-    LineNode *node;
-
-    node = list->head;
-
-    for (n = 1; n <= list->len; n++)
-    {
-        printNumLeftAligned(n, list);
-        write(STDOUT_FILENO, " | ", 3);
-        printLine(node);
-
-        if (n < list->len)
-        {
-            node = node->next;
-        }
-    }
-
-
-    if (node == NULL) return;
-    
-    n = strlen(node->line);
-    if (n == 0 || node->line[n - 1] != '\n')
-    {
-        // list is empty OR last line in list does not end with '\n'; print one anyways
-        write(STDOUT_FILENO, "\n", 1);
-    }
-}
 
 int validLineNum(int lineNum, LineList *list)
 {

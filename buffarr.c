@@ -21,7 +21,11 @@ BuffArr *createBuffArr()
 
 void deleteBuffArr(BuffArr *arr)
 {
-    free(arr->buf);
+    if (arr == NULL) return;
+    if (arr->buf != NULL)
+    {
+        free(arr->buf);
+    }
     free(arr);
 }
 

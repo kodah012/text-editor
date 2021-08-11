@@ -8,6 +8,7 @@
 #include "helper.h"
 #include "linelist.h"
 #include "buffarr.h"
+#include "commands.h"
 
 enum Mode
 {
@@ -17,13 +18,14 @@ enum Mode
 };
 
 enum Mode currMode = NORMAL;
+int fileDesc;
+char *filename;
 
-void setLines(LineList *lines, BuffArr *buffer);
-void runEditor(int, LineList*);
+void setLines(LineList*, BuffArr*);
+void runEditor(LineList*);
 
 int main(int argc, char *argv[])
 {
-    int fileDesc;
     BuffArr *buffer;
     LineList *lines;
 
@@ -36,8 +38,9 @@ int main(int argc, char *argv[])
     buffer = createBuffArr();
     lines = createLineList();
 
+    filename = argv[1];
     // open and read file into buffer and lines if file exists
-    fileDesc = open(argv[1], O_RDWR);
+    fileDesc = open(filename, O_RDWR);
     if (fileDesc != -1)
     {
         flock(fileDesc, LOCK_EX);
@@ -48,7 +51,7 @@ int main(int argc, char *argv[])
     deleteBuffArr(buffer);
 
     // start text editor loop
-    runEditor(fileDesc, lines);
+    runEditor(lines);
     
     // any code after this point should never be reached
  
@@ -59,45 +62,45 @@ int main(int argc, char *argv[])
 
 int validCommand(BuffArr *cmd, LineList *lines)
 {
-    int n;
-    int cmdIsValid = 0;
-
-    if (currMode == INSERT || currMode == APPEND) return 1;
+    if (currMode == INSERT || currMode == APPEND)
+    {
+        return 1;
+    }
 
     if (stringIsNumber(cmd->buf, cmd->len))
     {
-        n = atoi(cmd->buf);
-        cmdIsValid = validLineNum(n, lines);
+        return validLineNum(atoi(cmd->buf), lines);
     }
-    else if (*cmd->buf == 'p' && cmd->len == 1) cmdIsValid = 1;
-    else if (*cmd->buf == 'n' && cmd->len == 1) cmdIsValid = 1;
-    else if (*cmd->buf == 'd' && cmd->len == 1)
-    {
-        // valid if list is not empty
-        cmdIsValid = lines->head != NULL;
-    }
-    else if (*cmd->buf == 'm' && cmd->len > 1)
-    {
-        if (stringIsNumber(cmd->buf + 1, cmd->len - 1))
-        {
-            n = atoi(cmd->buf + 1);
-            cmdIsValid = validLineNum(n, lines);
-        }
-        else
-        {
-            cmdIsValid = cmd->buf[1] == '$' && cmd->len == 2;
-        }
-    }
-    else if (*cmd->buf == 'i' && cmd->len == 1) cmdIsValid = 1;
-    else if (*cmd->buf == 'a' && cmd->len == 1) cmdIsValid = 1;
-    else if (*cmd->buf == 'q' && cmd->len == 1) cmdIsValid = 1;
 
-    return cmdIsValid;
+    switch (*cmd->buf)
+    {
+        case 'p':
+            return cmd->len == 1;
+        case 'n':
+            return cmd->len == 1;
+        case 'd':
+            return cmd->len == 1 && lines->head != NULL;
+        case 'm':
+            if (stringIsNumber(cmd->buf + 1, cmd->len - 1))
+            {
+                return validLineNum(atoi(cmd->buf + 1), lines);
+            }
+            return cmd->buf[1] == '$' && cmd->len == 2;
+        case 'i':
+            return cmd->len == 1;
+        case 'a':
+            return cmd->len == 1;
+        case 'w':
+            return cmd->len == 1;
+        case 'q':
+            return cmd->len == 1;
+    }
+
+    return 0;
 }
 
-void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
+void runCommand(BuffArr *cmd, LineList *lines)
 {
-    int n;
     LineNode *node;
 
     if (currMode == INSERT || currMode == APPEND)
@@ -108,9 +111,6 @@ void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
         }
         else
         {
-            // if in 'i' mode, insertNodeBeforeCurr once
-            // else, just start appendNodeAfterCurr
-
             appendChar('\n', cmd);
             node = createLineNode(cmd->buf, cmd->len);
 
@@ -129,58 +129,47 @@ void runCommand(BuffArr *cmd, LineList *lines, int fileDesc)
 
     if (isdigit(*cmd->buf))
     {
-        n = atoi(cmd->buf);
-        setCurrLineNum(n, lines);
+        setCurrLineNum(atoi(cmd->buf), lines);
+        return;
     }
-    else if (*cmd->buf == 'p')
-    {
-        printLines(lines);
-    }
-    else if (*cmd->buf == 'n')
-    {
-        printNumberedLines(lines);
-    }
-    else if (*cmd->buf == 'd')
-    {
-        node = popCurrNode(lines);
-        free(node->line);
-        free(node);
-    }
-    else if (*cmd->buf == 'm')
-    {
-        if (isdigit(cmd->buf[1]))
-        {
-            n = atoi(cmd->buf + 1);
-            moveCurr(n, lines);
-        }
-        else if (cmd->buf[1] == '$')
-        {
-            // move line to end of file
-            moveCurr(-1, lines);
-        }
-    }
-    else if (*cmd->buf == 'i')
-    {
-        currMode = INSERT;
-    }
-    else if (*cmd->buf == 'a')
-    {
-        currMode = APPEND;
-    }
-    else if (*cmd->buf == 'q')
-    {
-        if (fileDesc != -1)
-        {
-            flock(fileDesc, LOCK_UN);
-            close(fileDesc);
-        }
 
-        deleteLineList(lines);
-        exit(EXIT_SUCCESS);
+    switch (*cmd->buf)
+    {
+        case 'p':
+            printCmd(lines);
+            break;
+        case 'n':
+            numberedPrintCmd(lines);
+            break;
+        case 'd':
+            deleteCmd(lines);
+            break;
+        case 'm':
+            moveCmd(cmd, lines);
+            break;
+        case 'i':
+            currMode = INSERT;
+            break;
+        case 'a':
+            currMode = APPEND;
+            break;
+        case 'w':
+            writeCmd(fileDesc, filename, lines);
+            break;
+        case 'q':
+            if (fileDesc != -1)
+            {
+                flock(fileDesc, LOCK_UN);
+                close(fileDesc);
+            }
+
+            deleteLineList(lines);
+            exit(EXIT_SUCCESS);
+            break;
     }
 }
 
-void runEditor(int fileDesc, LineList *lines)
+void runEditor(LineList *lines)
 {
     int i;
     int cmdWasValid;
@@ -216,7 +205,7 @@ void runEditor(int fileDesc, LineList *lines)
 
         if ((cmdWasValid = validCommand(cmd, lines)))
         {
-            runCommand(cmd, lines, fileDesc);
+            runCommand(cmd, lines);
         }
     } 
 }

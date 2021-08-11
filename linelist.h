@@ -30,8 +30,6 @@ void insertNodeBeforeCurr(LineNode *node, LineList *list);
 void appendNodeAfterCurr(LineNode *node, LineList *list);
 
 void printLine(LineNode *node);
-void printLines(LineList *list);
-void printNumberedLines(LineList *list);
 
 int validLineNum(int lineNum, LineList *list);
 

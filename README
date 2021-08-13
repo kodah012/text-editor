@@ -1,0 +1,42 @@
+edit(1)          edit(1)
+
+
+NAME
+        edit - line-by-line text editor
+
+SYNOPSIS
+        edit [file]
+
+DESCRIPTION
+        This program can be used for editing plain text files.
+
+        To start editing a file, use the command
+            
+            edit file
+        
+        There are no options.
+
+        These are the commands used while the editor is running:
+
+            p       print out all lines in the file
+
+            n       print out all lines in the file with line numbers
+
+            q       quit the program
+
+            d       delete the current line
+
+            m[n]    move the current line to be the line before line n
+                    if n is '$', move the current line to be the last line in the file
+
+            i       begin inserting text before the current line
+
+            a       begin inserting text after the current line
+
+            w       write the current buffer to the file
+
+        If an entered command is invalid, the editor will show '!>' on the next line instead of the default '->'
+
+AUTHOR
+        Khoa D. Hoang <kdh89@drexel.edu>
+

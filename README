@@ -12,7 +12,7 @@ DESCRIPTION
 
         To start editing a file, use the command
             
-            edit file
+            edit [file]
         
         There are no options.
 
@@ -35,7 +35,34 @@ DESCRIPTION
 
             w       write the current buffer to the file
 
-        If an entered command is invalid, the editor will show '!>' on the next line instead of the default '->'
+        If an entered command is invalid, the editor will show '!>' for the next prompt instead of the default '->'
+
+
+        The editor supports the creation of new files if the file does not already exist. 
+        All files are created with chmod 664.
+        Example:
+
+            edit newfile
+
+            In this case, a new file named "newfile" will be created in the current working directory.
+
+        The editor supports the creation of multiple directories if the directories do not already exist.
+        All directories are created with chmod 755.
+        Example:
+
+            edit newdir/newdir/newdir/newfile
+
+            In this case, three new directories called "newdir" will be created.
+            A new file named "newfile" will also be created in the last "newdir" directory.
+
+        The editor supports the use of absolute paths.
+        Example:
+
+            edit ~/newfile
+            edit /home/username/newfile
+
+            In this case, a new file named "newfile" will be created in the home directory,
+            assuming '~' is an alias for '/home/username'
 
 AUTHOR
         Khoa D. Hoang <kdh89@drexel.edu>

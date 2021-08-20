@@ -9,5 +9,6 @@ void numberedPrintCmd(LineList *lines);
 void deleteCmd(LineList *lines);
 void moveCmd(BuffArr *cmd, LineList *lines);
 void writeCmd(int fileDesc, char *filename, LineList *lines);
+int searchCmd(const char *str, LineList *lines);
 
 #endif

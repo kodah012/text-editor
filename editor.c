@@ -14,7 +14,8 @@ enum Mode
 {
     NORMAL,
     INSERT,
-    APPEND
+    APPEND,
+    SEARCH
 };
 
 enum Mode currMode = NORMAL;
@@ -62,7 +63,7 @@ int main(int argc, char *argv[])
 
 int validCommand(BuffArr *cmd, LineList *lines)
 {
-    if (currMode == INSERT || currMode == APPEND)
+    if (currMode != NORMAL)
     {
         return 1;
     }
@@ -92,6 +93,8 @@ int validCommand(BuffArr *cmd, LineList *lines)
             return cmd->len == 1;
         case 'w':
             return cmd->len == 1;
+        case 's':
+            return cmd->len == 1;
         case 'q':
             return cmd->len == 1;
     }
@@ -99,7 +102,7 @@ int validCommand(BuffArr *cmd, LineList *lines)
     return 0;
 }
 
-void runCommand(BuffArr *cmd, LineList *lines)
+int runCommand(BuffArr *cmd, LineList *lines)
 {
     LineNode *node;
 
@@ -124,13 +127,22 @@ void runCommand(BuffArr *cmd, LineList *lines)
                 appendNodeAfterCurr(node, lines);
             }
         }
-        return;
+        return 1;
+    }
+
+    if (currMode == SEARCH)
+    {
+        currMode = NORMAL;
+        // append '\0' for use with strstr() in searchCmd()
+        appendChar('\0', cmd);
+        write(STDOUT_FILENO, cmd->buf, cmd->len);
+        return searchCmd(cmd->buf, lines);
     }
 
     if (isdigit(*cmd->buf))
     {
         setCurrLineNum(atoi(cmd->buf), lines);
-        return;
+        return 1;
     }
 
     switch (*cmd->buf)
@@ -156,6 +168,9 @@ void runCommand(BuffArr *cmd, LineList *lines)
         case 'w':
             writeCmd(fileDesc, filename, lines);
             break;
+        case 's':
+            currMode = SEARCH;
+            break;
         case 'q':
             if (fileDesc != -1)
             {
@@ -167,6 +182,8 @@ void runCommand(BuffArr *cmd, LineList *lines)
             exit(EXIT_SUCCESS);
             break;
     }
+
+    return 1;
 }
 
 void runEditor(LineList *lines)
@@ -203,9 +220,11 @@ void runEditor(LineList *lines)
             appendChar(c, cmd);
         }
 
+        // cmd now contains only characters entered (no '\n' or '\0')
+
         if ((cmdWasValid = validCommand(cmd, lines)))
         {
-            runCommand(cmd, lines);
+            cmdWasValid = runCommand(cmd, lines);
         }
     } 
 }

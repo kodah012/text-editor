@@ -129,3 +129,28 @@ void writeCmd(int fileDesc, char *filename, LineList *lines)
 
 }
 
+int searchCmd(const char *str, LineList *lines)
+{
+    int lineNum;
+    LineNode *node;
+
+    lineNum = lines->currLineNum;
+    node = lines->curr;
+
+    while (node != NULL)
+    {
+        if (strstr(node->line, str) != NULL)
+        {
+            // string is found; change current line and current node
+            lines->curr = node;
+            lines->currLineNum = lineNum;
+            return 1;
+        }
+        
+        node = node->next;
+        lineNum++;
+    }
+
+    return 0;
+}
+

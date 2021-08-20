@@ -115,9 +115,6 @@ int createFile(char *filename, int lock)
         }
         appendChar('/', dir);
         free(start);
-
-        write(STDOUT_FILENO, dir->buf, dir->len);
-        write(STDOUT_FILENO, "\n", 1);
     }
 
     printf("filename: %s\n", filename);
@@ -149,10 +146,6 @@ int createFile(char *filename, int lock)
         i++;
     }
 
-    write(STDOUT_FILENO, dir->buf, dir->len);
-    write(STDOUT_FILENO, "\n", 1);
-    printf("filename: %s\n", filename);
-
     if (filename[i - 1] == '/')
     {
         fprintf(stderr, "createFile: cannot edit a directory\n");
@@ -160,8 +153,6 @@ int createFile(char *filename, int lock)
     }
 
     appendChar('\0', dir);
-
-    printf("%s\n", dir->buf);
 
     // create the file
     fileDesc = open(dir->buf, O_RDWR|O_CREAT, 0644);

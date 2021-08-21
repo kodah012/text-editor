@@ -38,6 +38,10 @@ DESCRIPTION
         If an entered command is invalid, the editor will show '!>' for the next prompt instead of the default '->'
 
 
+        If the file to be edited does not contain a newline ('\n') character at the end,
+        the editor will append one to the file once the buffer is written with command 'w'.
+
+
         The editor supports the creation of new files if the file does not already exist. 
         All files are created with chmod 664.
         Example:

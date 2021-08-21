@@ -8,6 +8,8 @@
 #include "linelist.h"
 #include "helper.h"
 
+#define TOKS_BUFSZ 64
+
 
 void printCmd(LineList *list)
 {
@@ -154,3 +156,75 @@ int searchCmd(const char *str, LineList *lines)
     return 0;
 }
 
+int processCmd(BuffArr *cmd, LineList *lines)
+{
+    int status;
+    int i;
+    BuffArr *buffer;
+    LineNode *currNode;
+    char *tokens[TOKS_BUFSZ];
+
+    buffer = createBuffArr();
+    currNode = lines->head;
+
+    // copy all characters in lines into buffer
+    while (currNode != NULL)
+    {
+        // copy line into buffer
+        appendLine(currNode->line, buffer);
+        
+        // go to next line
+        currNode = currNode->next;
+    }
+
+    clearLineList(lines);
+
+    if (fork() == 0) // child side
+    {
+        // apply command to lines
+        appendChar('\0', cmd);
+
+        // tokenize the command
+        // + 1 to get rid of the '|' at beginning of command
+        tokens[0] = strtok(cmd->buf + 1, " \t\n");
+        for (i = 1; i < TOKS_BUFSZ; i++)
+        {
+            tokens[i] = strtok(NULL, " \t\n");
+
+            // break out of loop if run out of tokens
+            if (tokens[i] == NULL)
+            {
+                break;
+            }
+            else
+            {
+                printf("token %d: %s\n", i, tokens[i]);
+            }
+        }
+
+        // execute the command
+        execvp(tokens[0], tokens);
+
+        // this point should never be reached; parent side should be running now
+        perror("exec");
+        exit(EXIT_FAILURE);
+
+    }
+    else // parent side
+    {
+        // wait until child process finishes
+        wait(&status);
+
+        write(STDIN_FILENO, "hell-ooo\n", 9);
+
+        // write the buffer to stdin
+
+        // read stdin into buffer
+
+        // copy buffer into lines
+    }
+
+    return 0;
+
+
+}

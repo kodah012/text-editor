@@ -95,6 +95,8 @@ int validCommand(BuffArr *cmd, LineList *lines)
             return cmd->len == 1;
         case 's':
             return cmd->len == 1;
+        case '|':
+            return 1;
         case 'q':
             return cmd->len == 1;
     }
@@ -170,6 +172,8 @@ int runCommand(BuffArr *cmd, LineList *lines)
         case 's':
             currMode = SEARCH;
             break;
+        case '|':
+            return processCmd(cmd, lines);
         case 'q':
             if (fileDesc != -1)
             {
@@ -258,8 +262,15 @@ void setLines(LineList *lines, BuffArr *buffer)
         }
     }
 
+    // this condition should never be met assuming readFile() appended a '\n' to buffer
+    if (newLineLen > 0)
+    {
+        fprintf(stderr, "setLines: not all characters read into lines\n");
+        exit(EXIT_FAILURE);
+    }
+
     // file does not end with '\n'; readFile() should already have handled this
-    if (newLineLen > 0 && buffer->buf[buffer->len - 1] != '\n')
+    if (buffer->buf[buffer->len - 1] != '\n')
     {
         fprintf(stderr, "setLines: buffer does not end in \'\\n\'\n");
         exit(EXIT_FAILURE);

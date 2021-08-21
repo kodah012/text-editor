@@ -92,10 +92,10 @@ LineNode *popCurrNode(LineList *list)
     return curr;
 }
 
-void deleteLineList(LineList *list)
+void clearLineList(LineList *list)
 {
     LineNode *node;
-
+    
     if (list == NULL) return;
 
     while (list->head != NULL)
@@ -104,6 +104,11 @@ void deleteLineList(LineList *list)
         free(node->line);
         free(node);
     }
+}
+
+void deleteLineList(LineList *list)
+{
+    clearLineList(list);
 
     free(list);
 }

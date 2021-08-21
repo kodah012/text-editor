@@ -10,5 +10,6 @@ void deleteCmd(LineList *lines);
 void moveCmd(BuffArr *cmd, LineList *lines);
 void writeCmd(int fileDesc, char *filename, LineList *lines);
 int searchCmd(const char *str, LineList *lines);
+int processCmd(BuffArr *cmd, LineList *lines);
 
 #endif

@@ -33,6 +33,7 @@ void printLine(LineNode *node);
 
 int validLineNum(int lineNum, LineList *list);
 
+void clearLineList(LineList *list);
 void deleteLineList(LineList *list);
 
 #endif

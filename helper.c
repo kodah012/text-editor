@@ -1,3 +1,10 @@
+/**
+ * Author:  Khoa Hoang
+ * Created: 08.21.2021
+ * 
+ * This file contains helper functions for the editor.
+ * It also handles file and directory creation.
+ **/
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +52,34 @@ int printNum(int num)
     n = sprintf(buf, "%d", num);
     write(STDOUT_FILENO, buf, n);
     return n;
+}
+
+int validFilename(char *filename)
+{
+    int i;
+
+    // missing '/' after '~'
+    if (filename[0] == '~' && filename[1] != '/')
+    {
+        return 0;
+    }
+
+    // double slashes (//)
+    for (i = 0; filename[i] != '\0'; i++)
+    {
+        if (filename[i] == '/' && filename[i+1] == '/')
+        {
+            return 0;
+        }
+    }
+
+    // empty string OR ends in a '/'
+    if (i == 0 || filename[i-1] == '/')
+    {
+        return 0;
+    }
+
+    return 1;
 }
 
 int createFile(char *filename, int lock)

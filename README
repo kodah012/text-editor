@@ -22,7 +22,7 @@ DESCRIPTION
 
             n       print out all lines in the file with line numbers.
 
-            q       quit the program....
+            q       quit the program.
 
             d       delete the current line.
 

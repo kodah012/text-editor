@@ -1,8 +1,15 @@
+/**
+ * Author:  Khoa Hoang
+ * Created: 08.21.2021
+ * 
+ * This file contains functions that handle all the commands the user can run while in the editor.
+ **/
 #include <stdlib.h>
 #include <string.h>
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -12,8 +19,6 @@
 #include "helper.h"
 
 #define TOKS_BUFSZ 64
-#define FIFO_NAME "fifo"
-
 
 void printCmd(LineList *list)
 {
@@ -163,6 +168,7 @@ int searchCmd(const char *str, LineList *lines)
 int processCmd(BuffArr *cmd, LineList *lines)
 {
     int i;
+    int currLineNum;
     int status;
     int pid;
 
@@ -265,20 +271,30 @@ int processCmd(BuffArr *cmd, LineList *lines)
 
         // start executing code here after child process ended
 
-        // read the read end of pipe2 into buffer
-        clearBuf(buffer);
-        readFile(pipe2[0], buffer);
+        if (WEXITSTATUS(status) != EXIT_FAILURE)
+        {
+            // read the read end of pipe2 into buffer
+            clearBuf(buffer);
+            readFile(pipe2[0], buffer);
 
-        // copy buffer into lines
-        clearLineList(lines);
-        setLines(lines, buffer);
+            // copy buffer into lines
+            currLineNum = lines->currLineNum;
+            clearLineList(lines);
+            setLines(lines, buffer);
+
+            if (currLineNum > lines->len)
+            {
+                currLineNum = lines->len;
+            }
+            setCurrLineNum(currLineNum, lines);
+        }
+
+        deleteBuffArr(buffer);
 
         // close remaining file descriptor (deletes the pipes)
         close(pipe2[0]);
-
     }
 
-    deleteBuffArr(buffer);
-
+    // return false if command failed execution, true otherwise
     return WEXITSTATUS(status) == EXIT_FAILURE ? 0 : 1;
 }

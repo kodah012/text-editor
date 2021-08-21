@@ -13,6 +13,8 @@ int printNum(int num);
 // len should not include '\0'; return 1 if all chars in str are digits and 0 otherwise; negatives return 0
 int stringIsNumber(char *str, int len);
 
+int validFilename(char *filename);
+
 // assuming file does not already exist, create file with name filename and add a lock (see flock)
 int createFile(char *filename, int lock);
 

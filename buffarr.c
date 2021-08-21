@@ -1,3 +1,11 @@
+/**
+ * Author:  Khoa Hoang
+ * Created: 08.21.2021
+ * 
+ * This file contains functions for the BuffArr datatype.
+ * BuffArr is a dynamic/resizable char array.
+ * Use it whenever you need a buffer of characters with an undefined length.
+ **/
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>

@@ -1,3 +1,12 @@
+/**
+ * Author:  Khoa Hoang
+ * Created: 08.21.2021
+ * 
+ * The file contains functions for the LineList datatype.
+ * LineList is a doubly-linked-list with each node holding a null-terminated string.
+ * LineList is also reponsible for keep tracking of current node.
+ * Use it whenever you need to keep track of a set of strings.
+ **/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

@@ -36,10 +36,16 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    filename = argv[1];
+    if (!validFilename(filename))
+    {
+        fprintf(stderr, "invalid filename\n");
+        return EXIT_FAILURE;
+    }
+
     buffer = createBuffArr();
     lines = createLineList();
 
-    filename = argv[1];
     // open and read file into buffer and lines if file exists
     fileDesc = open(filename, O_RDWR);
     if (fileDesc != -1)
@@ -175,6 +181,7 @@ int runCommand(BuffArr *cmd, LineList *lines)
         case '|':
             return processCmd(cmd, lines);
         case 'q':
+            printf("Exiting...\n");
             if (fileDesc != -1)
             {
                 flock(fileDesc, LOCK_UN);
@@ -182,10 +189,6 @@ int runCommand(BuffArr *cmd, LineList *lines)
             }
 
             deleteLineList(lines);
-
-
-            printf("exiting...\n");
-
 
             exit(EXIT_SUCCESS);
             break;

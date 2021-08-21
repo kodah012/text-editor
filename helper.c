@@ -58,15 +58,13 @@ int createFile(char *filename, int lock)
     clearBuf(dir);
 
 
-    if (*filename == '/')
+    if (*filename == '/') // absolute path
     {
-        // absolute path
         appendChar('/', dir);
         filename++;
     }
-    else if (*filename == '~')
+    else if (*filename == '~') // home directory path
     {
-        // home directory path
         start = getenv("HOME");
         if (start == NULL)
         {
@@ -92,11 +90,9 @@ int createFile(char *filename, int lock)
 
         // do not free start (according to documentation)
 
-
     }
-    else
+    else // relative path
     {
-        // relative path
         i = 0;
         start = (char*)malloc(512 * sizeof(char));
         memset(start, '\0', 512);
@@ -116,8 +112,6 @@ int createFile(char *filename, int lock)
         appendChar('/', dir);
         free(start);
     }
-
-    printf("filename: %s\n", filename);
 
 
     // create all nonexistent directories

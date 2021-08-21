@@ -135,7 +135,6 @@ int runCommand(BuffArr *cmd, LineList *lines)
         currMode = NORMAL;
         // append '\0' for use with strstr() in searchCmd()
         appendChar('\0', cmd);
-        write(STDOUT_FILENO, cmd->buf, cmd->len);
         return searchCmd(cmd->buf, lines);
     }
 
@@ -259,11 +258,11 @@ void setLines(LineList *lines, BuffArr *buffer)
         }
     }
 
+    // file does not end with '\n'; readFile() should already have handled this
     if (newLineLen > 0 && buffer->buf[buffer->len - 1] != '\n')
     {
-        // file does not end with '\n'; insert into list anyways
-        node = createLineNode(currLine, newLineLen);
-        appendNodeAfterCurr(node, lines);
+        fprintf(stderr, "setLines: buffer does not end in \'\\n\'\n");
+        exit(EXIT_FAILURE);
     }
 }
 

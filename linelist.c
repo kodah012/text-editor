@@ -13,11 +13,13 @@ LineNode *createLineNode(const char *line, int len)
 
     if (line[len - 1] == '\0')
     {
+        // line ends in '\0', so just copy it into str
         str = malloc(len * sizeof(char));
         strncpy(str, line, len);
     }
     else
     {
+        // line does not end in '\0'; add '\0' at the end and copy into str
         str = malloc((len + 1) * sizeof(char));
         strncpy(str, line, len);
         str[len] = '\0';

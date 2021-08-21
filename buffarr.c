@@ -74,10 +74,18 @@ void readFile(int fileDesc, BuffArr *arr)
 {
     int numChars;
 
+    // read all characters in file into buffer
     while ((numChars = read(fileDesc, arr->buf + arr->len, arr->cap - arr->len)) > 0)
     {
         arr->len += numChars;
         expandBuf(arr);
     }
+
+    // add a '\n' at the end if it is not present
+    if (arr->buf[arr->len - 1] != '\n')
+    {
+        appendChar('\n', arr);
+    }
+
 }
 

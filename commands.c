@@ -1,14 +1,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/file.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <signal.h>
 #include "buffarr.h"
 #include "linelist.h"
 #include "helper.h"
 
 #define TOKS_BUFSZ 64
+#define FIFO_NAME "fifo"
 
 
 void printCmd(LineList *list)
@@ -158,8 +162,13 @@ int searchCmd(const char *str, LineList *lines)
 
 int processCmd(BuffArr *cmd, LineList *lines)
 {
-    int status;
     int i;
+    int status;
+    int pid;
+
+    int pipe1[2];
+    int pipe2[2];
+
     BuffArr *buffer;
     LineNode *currNode;
     char *tokens[TOKS_BUFSZ];
@@ -177,13 +186,21 @@ int processCmd(BuffArr *cmd, LineList *lines)
         currNode = currNode->next;
     }
 
-    clearLineList(lines);
+    // pipe1[0] is read end of pipe; pipe1[1] is write end of pipe
+    pipe(pipe1);
+    pipe(pipe2);
 
-    if (fork() == 0) // child side
+    pid = fork();
+
+    if (pid == -1)
     {
-        // apply command to lines
-        appendChar('\0', cmd);
+        perror("processCmd: fork");
+        exit(EXIT_FAILURE);
+    }
 
+    if (pid == 0) // child side
+    {
+        appendChar('\0', cmd);
         // tokenize the command
         // + 1 to get rid of the '|' at beginning of command
         tokens[0] = strtok(cmd->buf + 1, " \t\n");
@@ -196,35 +213,72 @@ int processCmd(BuffArr *cmd, LineList *lines)
             {
                 break;
             }
-            else
-            {
-                printf("token %d: %s\n", i, tokens[i]);
-            }
         }
 
+        // close the write end of pipe1
+        close(pipe1[1]);
+        // close the read end of pipe2
+        close(pipe2[0]);
+
+        // replace stdin with the read end of pipe1
+        close(STDIN_FILENO);
+        dup(pipe1[0]);
+
+        // replace stdout with the write end of pipe2
+        close(STDOUT_FILENO);
+        dup(pipe2[1]);
+
         // execute the command
+        // input should come from read end of pipe1
+        // output should go to write end of pipe2
         execvp(tokens[0], tokens);
 
-        // this point should never be reached; parent side should be running now
-        perror("exec");
+        // if this line is reached, it means the command was invalid
+
+        deleteBuffArr(buffer);
+
+        // close remaining file descriptors (deletes the pipes)
+        close(pipe1[0]);
+        close(pipe2[1]);
+
         exit(EXIT_FAILURE);
 
     }
     else // parent side
     {
-        // wait until child process finishes
+        // close the read end of pipe1
+        close(pipe1[0]);
+        // close the write end of pipe2
+        close(pipe2[1]);
+
+        // write the buffer to the write end of pipe1
+        for (i = 0; i < buffer->len; i++)
+        {
+            write(pipe1[1], buffer->buf + i, 1);
+        }
+
+        // send EOF to child process by widowing pipe1 (close the write end)
+        close(pipe1[1]);
+
+        // wait until child process terminates
         wait(&status);
 
-        write(STDIN_FILENO, "hell-ooo\n", 9);
+        // start executing code here after child process ended
 
-        // write the buffer to stdin
-
-        // read stdin into buffer
+        // read the read end of pipe2 into buffer
+        clearBuf(buffer);
+        readFile(pipe2[0], buffer);
 
         // copy buffer into lines
+        clearLineList(lines);
+        setLines(lines, buffer);
+
+        // close remaining file descriptor (deletes the pipes)
+        close(pipe2[0]);
+
     }
 
-    return 0;
+    deleteBuffArr(buffer);
 
-
+    return WEXITSTATUS(status) == EXIT_FAILURE ? 0 : 1;
 }

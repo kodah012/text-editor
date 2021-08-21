@@ -7,6 +7,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include "buffarr.h"
+#include "linelist.h"
 
 
 int countDigits(int num)

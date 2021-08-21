@@ -18,24 +18,32 @@ DESCRIPTION
 
         These are the commands used while the editor is running:
 
-            p       print out all lines in the file
+            p       print out all lines in the file.
 
-            n       print out all lines in the file with line numbers
+            n       print out all lines in the file with line numbers.
 
-            q       quit the program
+            q       quit the program....
 
-            d       delete the current line
+            d       delete the current line.
 
-            m[n]    move the current line to be the line before line n
-                    if n is '$', move the current line to be the last line in the file
+            m[n]    move the current line to be the line before line n.
+                    if n is '$', move the current line to be the last line in the file.
 
-            i       begin inserting text before the current line
+            i       begin inserting text before the current line.
 
-            a       begin inserting text after the current line
+            a       begin inserting text after the current line.
 
-            w       write the current buffer to the file
+            w       write the current buffer to the file.
 
-        If an entered command is invalid, the editor will show '!>' for the next prompt instead of the default '->'
+            s       search the file for the string given in the next prompt.
+            
+            |[...]  if the command is prefixed by the '|' character, the editor will execute
+                    the characters after it as a shell command. The stdin used by the shell
+                    command will be the current file buffer. The stdout of the shell command
+                    will replace the current file buffer.
+
+        If an entered command is invalid or if the command itself failed, 
+        the editor will show '!>' for the next prompt instead of the default '->'.
 
 
         If the file to be edited does not contain a newline ('\n') character at the end,

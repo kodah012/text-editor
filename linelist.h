@@ -18,6 +18,8 @@ typedef struct LineList
 }
 LineList;
 
+typedef struct BuffArr BuffArr;
+
 LineNode *createLineNode(const char *line, int len);
 LineList *createLineList();
 
@@ -35,5 +37,6 @@ int validLineNum(int lineNum, LineList *list);
 
 void clearLineList(LineList *list);
 void deleteLineList(LineList *list);
+void setLines(LineList *list, BuffArr *arr);
 
 #endif

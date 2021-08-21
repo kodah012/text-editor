@@ -1,6 +1,9 @@
 #ifndef HELPER_H
 #define HELPER_H
 
+#include "linelist.h"
+#include "buffarr.h"
+
 // return number of digits in int num; will always return value greater than or equal to 1
 int countDigits(int num);
 

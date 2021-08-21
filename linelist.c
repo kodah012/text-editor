@@ -4,6 +4,7 @@
 #include <string.h>
 #include "linelist.h"
 #include "helper.h"
+#include "buffarr.h"
 
 
 LineNode *createLineNode(const char *line, int len)
@@ -265,4 +266,49 @@ void printLine(LineNode *node)
 int validLineNum(int lineNum, LineList *list)
 {
     return lineNum >= 1 && lineNum <= list->len;
+}
+
+void setLines(LineList *lines, BuffArr *buffer)
+{
+    int i;
+    int newLineLen;
+    char *currLine;
+    char *newLine;
+    LineNode *node;
+
+    newLineLen = 0;
+    currLine = buffer->buf;
+
+    for (i = 0; i < buffer->len; i++)
+    {
+        newLineLen++;
+
+        if (buffer->buf[i] == '\n')
+        {
+            node = createLineNode(currLine, newLineLen);
+            appendNodeAfterCurr(node, lines);
+
+            newLineLen = 0;
+            
+            // set currLine to start at character after '\n' if possible
+            if (i + 1 < buffer->len)
+            {
+                currLine = buffer->buf + i + 1;
+            }
+        }
+    }
+
+    // this condition should never be met assuming readFile() appended a '\n' to buffer
+    if (newLineLen > 0)
+    {
+        fprintf(stderr, "setLines: not all characters read into lines\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // file does not end with '\n'; readFile() should already have handled this
+    if (buffer->buf[buffer->len - 1] != '\n')
+    {
+        fprintf(stderr, "setLines: buffer does not end in \'\\n\'\n");
+        exit(EXIT_FAILURE);
+    }
 }
